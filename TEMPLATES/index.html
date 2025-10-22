@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI: Personalised Medical Diagnosis Agent</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0; 
+            min-height: 100vh;
+            color: #ffffff;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .chat-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .medai-logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .medai-subtitle {
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        .chat-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.4;
+            max-width: 75%;
+            backdrop-filter: blur(5px);
+        }
+        .message.bot {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            align-self: flex-start;
+            margin-right: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        .message.disclaimer {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            color: #ffc107;
+            font-size: 0.9em;
+            text-align: center;
+            max-width: 100%;
+            backdrop-filter: blur(5px);
+        }
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        #userInput {
+            flex-grow: 1;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-size: 1em;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            backdrop-filter: blur(5px);
+        }
+        #userInput::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        #userInput:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+        }
+        #sendButton {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            margin-left: 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        #sendButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        #sendButton:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: white;
+        }
+        .history-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="medai-logo">MedAI</div>
+            <div class="medai-subtitle">Personalised Medical Diagnosis Agent</div>
+            <div class="chat-controls">
+                <button id="newChatBtn" class="control-btn">New Chat</button>
+                <button id="chatHistoryBtn" class="control-btn">Chat History</button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            </div>
+        <form class="chat-input" id="chatForm">
+            <input type="text" id="userInput" placeholder="Type your answer...">
+            <button type="submit" id="sendButton">Send</button>
+        </form>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="color: white; text-align: center;">Chat History</h2>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMessages = document.getElementById('chatMessages');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const chatHistoryBtn = document.getElementById('chatHistoryBtn');
+        const historyModal = document.getElementById('historyModal');
+        const historyList = document.getElementById('historyList');
+        const closeModal = document.querySelector('.close');
+
+        // --- Chat State ---
+        const questions = [
+            { key: 'gender', text: 'First, what is your gender? (Male/Female)' },
+            { key: 'age', text: 'What is your age?' },
+            { key: 'pregnancies', text: 'How many times have you been pregnant?', conditional: true, dependsOn: 'gender', showIf: 'Female' },
+            { key: 'glucose', text: 'What is your Plasma Glucose concentration (mg/dl)?' },
+            { key: 'bp', text: 'What is your Diastolic Blood Pressure (mm Hg)?' },
+            { key: 'skin', text: 'What is your Triceps Skinfold Thickness (mm)?' },
+            { key: 'insulin', text: 'What is your 2-Hour Serum Insulin (mu U/ml)?' },
+            { key: 'bmi', text: 'What is your Body Mass Index (BMI)?' },
+            { key: 'dpf', text: 'What is your Diabetes Pedigree Function value?' }
+        ];
+
+        let currentQuestionIndex = 0;
+        let userData = {};
+
+        // --- Functions ---
+
+        // Adds a message bubble to the chat window
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            // Scroll to the bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Asks the next question or starts analysis
+        function askNextQuestion() {
+            // Skip conditional questions that don't apply
+            while (currentQuestionIndex < questions.length) {
+                const question = questions[currentQuestionIndex];
+                
+                // Check if this is a conditional question
+                if (question.conditional) {
+                    const dependsOnValue = userData[question.dependsOn];
+                    if (dependsOnValue && dependsOnValue.toLowerCase() !== question.showIf.toLowerCase()) {
+                        // Skip this question and move to next
+                        currentQuestionIndex++;
+                        continue;
+                    }
+                }
+                
+                // Ask this question
+                addMessage(question.text, 'bot');
+                
+                // Set appropriate input type
+                if (question.key === 'gender') {
+                    userInput.type = 'text';
+                    userInput.placeholder = 'Type Male or Female...';
+                } else {
+                    userInput.type = 'number';
+                    userInput.step = 'any';
+                    userInput.placeholder = 'Type a number (decimals allowed)...';
+                }
+                userInput.focus(); // Focus on input for better UX
+                return;
+            }
+            
+            // All questions answered
+            addMessage('Thank you. Analyzing your data now...', 'bot');
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            getPrediction();
+        }
+
+        // Handles the form submission
+        async function handleFormSubmit(event) {
+            event.preventDefault(); // Stop page from reloading
+            
+            const value = userInput.value.trim();
+            if (value === '') return; // Don't send empty messages
+
+            // Validate gender input
+            if (questions[currentQuestionIndex].key === 'gender') {
+                const genderValue = value.toLowerCase();
+                if (genderValue !== 'male' && genderValue !== 'female') {
+                    addMessage('⚠️ Please enter either "Male" or "Female".', 'bot');
+                    return;
+                }
+            }
+
+            // 1. Display user's answer
+            addMessage(value, 'user');
+            
+            // 2. Store the answer
+            const currentKey = questions[currentQuestionIndex].key;
+            userData[currentKey] = value;
+            
+            // 3. Move to next question
+            currentQuestionIndex++;
+            userInput.value = ''; // Clear the input box
+            
+            // 4. Ask the next question
+            askNextQuestion();
+        }
+
+        // Sends data to the Flask backend and gets the result
+        async function getPrediction() {
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                // Display the final diagnosis
+                addMessage(result.diagnosis_text, 'bot');
+                addMessage('This is an educational project. Please consult a real doctor for any health concerns.', 'bot disclaimer');
+                
+                // Show success message instead of error
+                addMessage('✅ Diagnosis completed successfully! You can start a new chat or view your chat history.', 'bot');
+                
+                // Reset for a new conversation
+                resetChat();
+
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('⚠️ For another diagnosis click on new chat.', 'bot');
+            }
+        }
+
+        // Resets the chat to the beginning
+        function resetChat() {
+            addMessage("Let's start over. MedAI is ready for the first piece of information.", 'bot');
+            currentQuestionIndex = 0;
+            userData = {};
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            userInput.type = 'text'; // Reset input type
+            userInput.placeholder = 'Type your answer...';
+            askNextQuestion();
+        }
+
+        // Load chat history
+        async function loadChatHistory() {
+            try {
+                const response = await fetch('/chat-history');
+                const data = await response.json();
+                
+                historyList.innerHTML = '';
+                
+                if (data.sessions && data.sessions.length > 0) {
+                    data.sessions.forEach(session => {
+                        const historyItem = document.createElement('div');
+                        historyItem.className = 'history-item';
+                        historyItem.innerHTML = `
+                            <div style="color: white;">
+                                <strong>Session: ${session.session_id.substring(0, 8)}...</strong><br>
+                                <small>Date: ${new Date(session.created_at).toLocaleString()}</small><br>
+                                <small>Diagnosis: ${session.diagnosis} (${session.confidence.toFixed(2)}%)</small>
+                            </div>
+                        `;
+                        historyItem.onclick = () => loadChatSession(session.session_id);
+                        historyList.appendChild(historyItem);
+                    });
+                } else {
+                    historyList.innerHTML = '<div style="color: white; text-align: center;">No chat history found.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+                historyList.innerHTML = '<div style="color: red; text-align: center;">Error loading chat history.</div>';
+            }
+        }
+
+        // Load specific chat session
+        async function loadChatSession(sessionId) {
+            try {
+                const response = await fetch(`/chat-messages/${sessionId}`);
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > 0) {
+                    // Clear current chat
+                    chatMessages.innerHTML = '';
+                    
+                    // Disable input for viewing mode
+                    userInput.disabled = true;
+                    sendButton.disabled = true;
+                    
+                    // Add all messages from the session
+                    data.messages.forEach(message => {
+                        addMessage(message.content, message.type);
+                    });
+                    
+                    // Add a message indicating this is a historical view
+                    addMessage('📜 This is a historical view of your previous chat. Click "New Chat" to start a fresh conversation.', 'bot disclaimer');
+                }
+                
+                historyModal.style.display = 'none';
+            } catch (error) {
+                console.error('Error loading chat session:', error);
+                addMessage('Error loading chat history. Please try again.', 'bot');
+            }
+        }
+        
+        // --- Start the Chat ---
+        chatForm.addEventListener('submit', handleFormSubmit);
+        
+        // Chat history functionality
+        newChatBtn.addEventListener('click', () => {
+            chatMessages.innerHTML = '';
+            currentQuestionIndex = 0;
+            userData = {};
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            userInput.type = 'text'; // Reset input type
+            userInput.placeholder = 'Type your answer...';
+            addMessage('Hello! I am MedAI, your personalised medical diagnosis agent designed to assist with preliminary diabetes diagnosis.', 'bot');
+            addMessage('⚠️ Disclaimer: I am not a real doctor. This is an educational project. Please consult a medical professional for any health concerns.', 'bot disclaimer');
+            askNextQuestion();
+        });
+        
+        chatHistoryBtn.addEventListener('click', () => {
+            historyModal.style.display = 'block';
+            loadChatHistory();
+        });
+        
+        closeModal.addEventListener('click', () => {
+            historyModal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', (event) => {
+            if (event.target === historyModal) {
+                historyModal.style.display = 'none';
+            }
+        });
+        
+        // Add initial welcome messages
+        addMessage('Hello! I am MedAI, your personalised medical diagnosis agent designed to assist with preliminary diabetes diagnosis.', 'bot');
+        addMessage('⚠️ Disclaimer: I am not a real doctor. This is an educational project. Please consult a medical professional for any health concerns.', 'bot disclaimer');
+        
+        // Ask the first question
+        askNextQuestion();
+    </script>
+</body>
+</html>
